@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Garden Planner — Android UI</title>
+<title>Garden Planner — Android UI (Fixed)</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -11,12 +11,10 @@
     --radius:12px;
   }
   html,body{height:100%;margin:0;font-family:Roboto,Arial,Helvetica,sans-serif;background:var(--bg);color:#0b1220}
-  /* Top app bar */
   .appbar{height:64px;background:linear-gradient(180deg,#ffffff, #f7fbf9);display:flex;align-items:center;padding:0 16px;box-shadow:0 2px 6px rgba(16,24,40,.08);position:sticky;top:0;z-index:10}
   .appbar .title{font-weight:500;color:#0b2f1f;font-size:18px;margin-left:12px}
   .app{display:grid;grid-template-columns:300px 1fr 360px;gap:16px;padding:16px;box-sizing:border-box;height:calc(100vh - 64px)}
   .panel{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:0 1px 4px rgba(16,24,40,.06);overflow:auto}
-  /* Material-like controls */
   .toolbar .section-title{font-size:13px;color:var(--muted);margin:6px 0 10px}
   .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:500;box-shadow:0 1px 2px rgba(16,24,40,.08)}
@@ -34,7 +32,6 @@
   .handle{fill:#fff;stroke:var(--accent);stroke-width:1;cursor:pointer}
   .top-actions{display:flex;gap:8px;align-items:center}
   .chip{padding:6px 10px;border-radius:999px;background:#f3fbf6;color:var(--accent);border:1px solid rgba(30,142,99,.08);font-weight:500}
-  /* responsive */
   @media (max-width:1100px){ .app{grid-template-columns:1fr;grid-auto-rows:auto} .floating{right:18px;bottom:18px} }
 </style>
 </head>
@@ -125,7 +122,7 @@
   <div class="floating" id="fab">+</div>
 
 <script>
-/* ---------- Plant DB (same representative list) ---------- */
+/* ---------- Plant DB ---------- */
 const PLANTS = [
   {id:'tomato',name:'Tomato',spacing_cm:45,row_spacing_cm:90,plantingMonths:[9,10,11,12,1,2,3],notes:'Full sun; staking recommended'},
   {id:'lettuce',name:'Lettuce',spacing_cm:25,row_spacing_cm:30,plantingMonths:[3,4,5,8,9,10],notes:'Cool season'},
@@ -136,8 +133,9 @@ const PLANTS = [
   {id:'strawberry',name:'Strawberry',spacing_cm:30,row_spacing_cm:40,plantingMonths:[3,4,5,8,9],notes:'Perennial in mild climates'},
   {id:'rosemary',name:'Rosemary',spacing_cm:60,row_spacing_cm:100,plantingMonths:[1,2,3,4,5,6,7,8,9,10,11,12],notes:'Perennial'}
 ];
+
 /* ---------- App state ---------- */
-const state = { objects:[], selectedId:null, tool:'select', snap:true, gridSize:10, units:'metric', undoStack:[], redoStack:[] };
+const state = { objects:[], selectedId:null, tool:'select', snap:true, gridSize:10, units:'metric', undoStack:[], redoStack:[], _pathTemp:null };
 
 /* ---------- DOM refs ---------- */
 const svg = document.getElementById('svgCanvas');
@@ -151,6 +149,21 @@ function uid(prefix='id'){return prefix+Math.random().toString(36).slice(2,9)}
 function snap(v){ if(!state.snap) return v; const g=Number(document.getElementById('gridSize').value)||10; return Math.round(v/g)*g; }
 function pxToCm(px){ return px/10; } // simple scale
 function cmToPx(cm){ return cm*10; }
+function varAccent(){ return getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#1e8e63'; }
+
+/* ---------- setTool (fixed) ---------- */
+function setTool(t){
+  state.tool = t;
+  // visual active state for buttons
+  ['tool-select','tool-bed','tool-path','tool-overhang','tool-plant'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(id === 'tool-'+t) el.style.boxShadow = 'inset 0 0 0 2px rgba(255,255,255,0.06), 0 2px 6px rgba(16,24,40,.06)';
+    else el.style.boxShadow = '';
+  });
+  // clear any temporary path start
+  if(t !== 'path' && state._pathTemp){ state._pathTemp = null; const m = document.getElementById('_pathStartMarker'); if(m) m.remove(); }
+}
 
 /* ---------- Render plant palette ---------- */
 function renderPalette(list=PLANTS){
@@ -183,6 +196,8 @@ document.getElementById('gridSize').onchange=(e)=>{ state.gridSize=Number(e.targ
 document.getElementById('units').onchange=(e)=>{ state.units=e.target.value; };
 document.getElementById('plantSearch').oninput=(e)=>{ const q=e.target.value.toLowerCase(); renderPalette(PLANTS.filter(p=>p.name.toLowerCase().includes(q))); };
 document.getElementById('clearSearch').onclick=()=>{ document.getElementById('plantSearch').value=''; renderPalette(); };
+document.getElementById('helpBtn').onclick=()=>alert('Tap canvas to add items when a tool is active. Drag plants from the palette to place them. Save to .garden to persist.');
+document.getElementById('fab').onclick=()=>{ setTool('bed'); alert('Quick: Add Bed tool selected. Tap canvas to place.'); };
 
 /* ---------- Drag/drop onto SVG ---------- */
 svg.addEventListener('dragover',e=>e.preventDefault());
@@ -196,14 +211,11 @@ svg.addEventListener('drop',e=>{
   }catch(err){}
 });
 
-/* ---------- svgPointerDown: fixed handler ---------- */
+/* ---------- svgPointerDown (fixed) ---------- */
 svg.addEventListener('mousedown', svgPointerDown);
-
 function svgPointerDown(e){
-  // central handler for click-to-create depending on active tool
   const x = snap(e.offsetX), y = snap(e.offsetY);
   if(state.tool === 'bed'){
-    // create a default bed centered at click
     const w = 300, h = 140;
     addBed(x - Math.round(w/2), y - Math.round(h/2), w, h);
     return;
@@ -214,16 +226,13 @@ function svgPointerDown(e){
     return;
   }
   if(state.tool === 'plant'){
-    // quick plant picker: open small prompt to choose plant id
     const plantId = prompt('Enter plant id (e.g., tomato, lettuce, basil):','lettuce');
     if(plantId){ addPlantInstance(plantId.trim(), x, y); }
     return;
   }
   if(state.tool === 'path'){
-    // simple path creation: first click starts, second click ends
     if(!state._pathTemp){
       state._pathTemp = [{x,y}];
-      // visual feedback: small marker
       const marker = document.createElementNS('http://www.w3.org/2000/svg','circle');
       marker.setAttribute('cx',x); marker.setAttribute('cy',y); marker.setAttribute('r',6);
       marker.setAttribute('fill','#fff'); marker.setAttribute('stroke',varAccent());
@@ -233,23 +242,18 @@ function svgPointerDown(e){
     } else {
       state._pathTemp.push({x,y});
       addPath(state._pathTemp);
-      // cleanup
       const m = document.getElementById('_pathStartMarker'); if(m) m.remove();
       state._pathTemp = null;
     }
     return;
   }
-  // default: selection behavior
-  // find object under pointer (simple hit test)
+  // selection fallback
   const hit = hitTest(e.offsetX, e.offsetY);
   if(hit) selectObject(hit.id);
   else { state.selectedId = null; renderInspector(); highlightSelection(); }
 }
 
-/* helper to return accent color for inline use */
-function varAccent(){ return getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#1e8e63'; }
-
-/* ---------- Hit test (simple bounding box) ---------- */
+/* ---------- Hit test ---------- */
 function hitTest(px,py){
   for(let i=state.objects.length-1;i>=0;i--){
     const o = state.objects[i];
@@ -259,7 +263,6 @@ function hitTest(px,py){
       const r = o.w/2; const dx = px - o.x; const dy = py - o.y;
       if(dx*dx + dy*dy <= r*r) return o;
     } else if(o.type==='path'){
-      // rough: check distance to any segment
       for(let j=0;j<o.points.length-1;j++){
         const a=o.points[j], b=o.points[j+1];
         if(pointToSegmentDistance(px,py,a.x,a.y,b.x,b.y) < 12) return o;
@@ -273,14 +276,15 @@ function pointToSegmentDistance(px,py,x1,y1,x2,y2){
   const dot = A*C + B*D;
   const len_sq = C*C + D*D;
   let param = len_sq !== 0 ? dot / len_sq : -1;
-  if(param < 0) { var xx = x1; var yy = y1; }
-  else if(param > 1) { var xx = x2; var yy = y2; }
-  else { var xx = x1 + param * C; var yy = y1 + param * D; }
+  let xx, yy;
+  if(param < 0) { xx = x1; yy = y1; }
+  else if(param > 1) { xx = x2; yy = y2; }
+  else { xx = x1 + param * C; yy = y1 + param * D; }
   const dx = px - xx, dy = py - yy;
   return Math.sqrt(dx*dx + dy*dy);
 }
 
-/* ---------- Object creation functions ---------- */
+/* ---------- Object creation ---------- */
 function addBed(x=200,y=200,w=300,h=120){
   const id=uid('bed_');
   const obj={id,type:'bed',x,y,w,h,rotation:0,props:{fill:'#fff7ed',stroke:'#f0b36a'}};
@@ -555,10 +559,6 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey) && e.key==='z'){ undo(); }
   if((e.ctrlKey||e.metaKey) && e.key==='y'){ redo(); }
 });
-
-/* ---------- Utility: simple alert for help button ---------- */
-document.getElementById('helpBtn').onclick=()=>alert('Tap canvas to add items when a tool is active. Drag plants from the palette to place them. Save to .garden to persist.');
-document.getElementById('fab').onclick=()=>{ setTool('bed'); alert('Quick: Add Bed tool selected. Tap canvas to place.'); };
 </script>
 </body>
 </html>
