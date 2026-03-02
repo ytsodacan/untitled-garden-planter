@@ -3,172 +3,153 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Garden Planner</title>
+<title>Garden Planner — Android UI</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root{--ui-bg:#f6f7f9;--accent:#2b8a6b;--muted:#6b7280}
-  body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial;background:var(--ui-bg);color:#111}
-  .app{display:grid;grid-template-columns:260px 1fr 320px;gap:12px;height:100vh;padding:12px;box-sizing:border-box}
-  .panel{background:white;border-radius:8px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:auto}
-  .toolbar h3{margin:6px 0 12px;font-size:14px}
-  .palette{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .plant-item{display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;border:1px solid #eee;cursor:grab}
-  .plant-item img{width:28px;height:28px;border-radius:4px;object-fit:cover}
-  .canvas-wrap{position:relative;display:flex;flex-direction:column;height:100%}
-  #svgCanvas{flex:1;background:linear-gradient(180deg,#fff,#f8fafc);border-radius:8px;border:1px solid #e6e9ee}
-  .inspector h3{margin:6px 0 12px;font-size:14px}
-  .row{display:flex;gap:8px;margin-bottom:8px}
-  label{font-size:13px;color:var(--muted)}
-  input[type="number"],select,input[type="text"]{width:100%;padding:6px;border-radius:6px;border:1px solid #ddd}
-  button{background:var(--accent);color:white;border:none;padding:8px 10px;border-radius:6px;cursor:pointer}
+  :root{
+    --bg:#f2f5f7; --card:#ffffff; --accent:#1e8e63; --muted:#6b7280; --surface-elev:#e6eef0;
+    --radius:12px;
+  }
+  html,body{height:100%;margin:0;font-family:Roboto,Arial,Helvetica,sans-serif;background:var(--bg);color:#0b1220}
+  /* Top app bar */
+  .appbar{height:64px;background:linear-gradient(180deg,#ffffff, #f7fbf9);display:flex;align-items:center;padding:0 16px;box-shadow:0 2px 6px rgba(16,24,40,.08);position:sticky;top:0;z-index:10}
+  .appbar .title{font-weight:500;color:#0b2f1f;font-size:18px;margin-left:12px}
+  .app{display:grid;grid-template-columns:300px 1fr 360px;gap:16px;padding:16px;box-sizing:border-box;height:calc(100vh - 64px)}
+  .panel{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:0 1px 4px rgba(16,24,40,.06);overflow:auto}
+  /* Material-like controls */
+  .toolbar .section-title{font-size:13px;color:var(--muted);margin:6px 0 10px}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:500;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+  .btn-ghost{background:transparent;color:var(--accent);border:1px solid rgba(30,142,99,.12)}
+  input[type="number"],select,input[type="text"]{width:100%;padding:10px;border-radius:10px;border:1px solid #e6eef0;background:#fbfeff}
+  .palette{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .plant-item{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;border:1px solid #f0f4f3;background:linear-gradient(180deg,#fff,#fbfffc);cursor:grab}
+  .plant-item .icon{width:36px;height:36px;border-radius:8px;background:#e6f7ef;display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:700}
+  .canvas-wrap{display:flex;flex-direction:column;height:100%}
+  #svgCanvas{flex:1;border-radius:12px;border:1px solid #e6eef0;background:linear-gradient(180deg,#fff,#f8fafc)}
+  .floating{position:fixed;right:28px;bottom:28px;background:var(--accent);width:56px;height:56px;border-radius:28px;display:flex;align-items:center;justify-content:center;color:white;font-size:22px;box-shadow:0 6px 18px rgba(30,142,99,.18);cursor:pointer}
+  .inspector .section-title{font-size:13px;color:var(--muted);margin:6px 0 10px}
+  .timeline{height:220px;overflow:auto;border-radius:10px;padding:8px;border:1px dashed #e6eef0;background:#fff}
   .muted{color:var(--muted);font-size:13px}
-  .timeline{height:160px;overflow:auto;border-radius:6px;padding:8px;border:1px dashed #e6e9ee;background:#fff}
-  .small{font-size:12px}
-  .controls{display:flex;gap:8px;align-items:center;margin-bottom:8px}
-  .handle{fill:#fff;stroke:#2b8a6b;stroke-width:1;cursor:pointer}
+  .handle{fill:#fff;stroke:var(--accent);stroke-width:1;cursor:pointer}
+  .top-actions{display:flex;gap:8px;align-items:center}
+  .chip{padding:6px 10px;border-radius:999px;background:#f3fbf6;color:var(--accent);border:1px solid rgba(30,142,99,.08);font-weight:500}
+  /* responsive */
+  @media (max-width:1100px){ .app{grid-template-columns:1fr;grid-auto-rows:auto} .floating{right:18px;bottom:18px} }
 </style>
 </head>
 <body>
-<div class="app">
-  <div class="panel toolbar">
-    <h3>Tools</h3>
-    <div class="row">
-      <button id="tool-select">Select</button>
-      <button id="tool-bed">Add Bed</button>
-      <button id="tool-path">Add Path</button>
+  <div class="appbar">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style="border-radius:8px;background:linear-gradient(180deg,#e6fbf0,#dff7ea);padding:6px">
+      <path d="M4 12h16M4 6h16M4 18h16" stroke="#0b6b4a" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>
+    <div class="title">Garden Planner</div>
+    <div style="margin-left:auto" class="top-actions">
+      <div class="chip">Android UI</div>
+      <button class="btn-ghost" id="helpBtn" style="padding:8px 10px">Help</button>
     </div>
-    <div class="row">
-      <button id="tool-overhang">Add Overhang</button>
-      <button id="tool-plant">Add Plant</button>
-      <button id="auto-fill">Auto-fill Bed</button>
-    </div>
-    <div style="margin-top:12px">
-      <label class="small">Grid size (cm)</label>
+  </div>
+
+  <div class="app">
+    <div class="panel toolbar">
+      <div class="section-title">Tools</div>
+      <div class="controls">
+        <button id="tool-select">Select</button>
+        <button id="tool-bed">Add Bed</button>
+        <button id="tool-path">Add Path</button>
+        <button id="tool-overhang">Overhang</button>
+        <button id="tool-plant">Add Plant</button>
+      </div>
+
+      <div style="margin-top:12px" class="section-title">Grid & Units</div>
+      <label class="muted small">Grid size (cm)</label>
       <input id="gridSize" type="number" value="10" />
       <div style="margin-top:8px" class="controls">
-        <label class="small">Units</label>
         <select id="units"><option value="metric">Metric (m, cm)</option><option value="imperial">Imperial (ft, in)</option></select>
+        <button id="snapBtn" class="btn-ghost">Toggle Snap</button>
+      </div>
+
+      <div style="margin-top:12px" class="section-title">Plant palette</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="plantSearch" type="text" placeholder="Search plants" />
+        <button id="clearSearch" class="btn-ghost">Clear</button>
+      </div>
+      <div class="palette" id="plantPalette"></div>
+
+      <div style="margin-top:12px" class="section-title">Save / Load</div>
+      <div class="controls">
+        <button id="saveBtn">Save .garden</button>
+        <button id="loadBtn" class="btn-ghost">Load</button>
+        <input id="fileInput" type="file" accept=".garden" style="display:none" />
+      </div>
+      <div style="margin-top:10px" class="muted">Tip: Tap a plant to add it. Drag from the palette to place.</div>
+    </div>
+
+    <div class="panel canvas-wrap">
+      <svg id="svgCanvas" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M20 0 L0 0 0 20" fill="none" stroke="#eef2f6" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)"></rect>
+        <g id="objects"></g>
+      </svg>
+
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+        <button id="undoBtn" class="btn-ghost">Undo</button>
+        <button id="redoBtn" class="btn-ghost">Redo</button>
+        <button id="auto-fill" style="margin-left:auto">Auto-fill Bed</button>
       </div>
     </div>
 
-    <h3>Plant palette</h3>
-    <div class="palette" id="plantPalette"></div>
-    <div style="margin-top:12px">
-      <label class="small">Search plants</label>
-      <input id="plantSearch" type="text" placeholder="Search by name" />
-    </div>
+    <div class="panel inspector">
+      <div class="section-title">Inspector</div>
+      <div id="inspectorContent" class="muted small">Select an object to edit properties.</div>
 
-    <h3 style="margin-top:12px">Save / Load</h3>
-    <div class="row">
-      <button id="saveBtn">Save .garden</button>
-      <button id="loadBtn">Load .garden</button>
-      <input id="fileInput" type="file" accept=".garden" style="display:none" />
-    </div>
-    <div style="margin-top:8px" class="muted small">Tip: .garden files are JSON snapshots of your layout and planner.</div>
-  </div>
-
-  <div class="panel canvas-wrap">
-    <svg id="svgCanvas" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M20 0 L0 0 0 20" fill="none" stroke="#eef2f6" stroke-width="1"/>
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#grid)"></rect>
-      <g id="objects"></g>
-    </svg>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button id="undoBtn">Undo</button>
-      <button id="redoBtn">Redo</button>
-      <button id="snapBtn">Toggle Snap</button>
-      <div style="margin-left:auto" class="muted small">Drag objects to move. Use corner handles to resize.</div>
+      <div style="margin-top:12px" class="section-title">Planting planner</div>
+      <div class="timeline" id="plannerTimeline"></div>
+      <div style="margin-top:8px">
+        <label class="muted small">Month view</label>
+        <select id="monthView">
+          <option value="all">All months</option>
+          <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+          <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+          <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+          <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+        </select>
+      </div>
     </div>
   </div>
 
-  <div class="panel inspector">
-    <h3>Inspector</h3>
-    <div id="inspectorContent" class="small muted">Select an object to edit properties.</div>
-
-    <h3 style="margin-top:12px">Planting planner</h3>
-    <div class="timeline" id="plannerTimeline"></div>
-    <div style="margin-top:8px">
-      <label class="small">Month view</label>
-      <select id="monthView">
-        <option value="all">All months</option>
-        <option value="1">January</option><option value="2">February</option><option value="3">March</option>
-        <option value="4">April</option><option value="5">May</option><option value="6">June</option>
-        <option value="7">July</option><option value="8">August</option><option value="9">September</option>
-        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
-      </select>
-    </div>
-  </div>
-</div>
+  <div class="floating" id="fab">+</div>
 
 <script>
-/* ---------- Data: plant database (representative large list) ---------- */
+/* ---------- Plant DB (same representative list) ---------- */
 const PLANTS = [
   {id:'tomato',name:'Tomato',spacing_cm:45,row_spacing_cm:90,plantingMonths:[9,10,11,12,1,2,3],notes:'Full sun; staking recommended'},
   {id:'lettuce',name:'Lettuce',spacing_cm:25,row_spacing_cm:30,plantingMonths:[3,4,5,8,9,10],notes:'Cool season'},
   {id:'carrot',name:'Carrot',spacing_cm:5,row_spacing_cm:20,plantingMonths:[3,4,5,8,9],notes:'Loose soil'},
-  {id:'beet',name:'Beet',spacing_cm:10,row_spacing_cm:25,plantingMonths:[3,4,5,8,9],notes:''},
-  {id:'spinach',name:'Spinach',spacing_cm:10,row_spacing_cm:20,plantingMonths:[3,4,5,8,9],notes:''},
   {id:'basil',name:'Basil',spacing_cm:30,row_spacing_cm:40,plantingMonths:[10,11,12,1,2,3,4],notes:'Warm season herb'},
-  {id:'parsley',name:'Parsley',spacing_cm:20,row_spacing_cm:30,plantingMonths:[3,4,5,8,9,10],notes:''},
-  {id:'rosemary',name:'Rosemary',spacing_cm:60,row_spacing_cm:100,plantingMonths:[1,2,3,4,5,6,7,8,9,10,11,12],notes:'Perennial'},
-  {id:'oregano',name:'Oregano',spacing_cm:30,row_spacing_cm:40,plantingMonths:[9,10,11,12,1,2,3],notes:''},
-  {id:'chives',name:'Chives',spacing_cm:15,row_spacing_cm:25,plantingMonths:[3,4,5,8,9,10],notes:''},
-  {id:'potato',name:'Potato',spacing_cm:35,row_spacing_cm:75,plantingMonths:[3,4,5,8,9],notes:''},
-  {id:'onion',name:'Onion',spacing_cm:10,row_spacing_cm:20,plantingMonths:[3,4,5,8,9],notes:''},
-  {id:'garlic',name:'Garlic',spacing_cm:15,row_spacing_cm:30,plantingMonths:[4,5,6],notes:''},
+  {id:'microgreens',name:'Microgreens',spacing_cm:2,row_spacing_cm:2,plantingMonths:[1,2,3,4,5,6,7,8,9,10,11,12],notes:'Quick harvest'},
   {id:'pumpkin',name:'Pumpkin',spacing_cm:150,row_spacing_cm:200,plantingMonths:[10,11,12,1,2,3],notes:'Needs space'},
-  {id:'zucchini',name:'Zucchini',spacing_cm:90,row_spacing_cm:120,plantingMonths:[10,11,12,1,2,3],notes:''},
-  {id:'cucumber',name:'Cucumber',spacing_cm:60,row_spacing_cm:90,plantingMonths:[10,11,12,1,2,3],notes:'Trellis helps'},
-  {id:'kale',name:'Kale',spacing_cm:45,row_spacing_cm:60,plantingMonths:[3,4,5,8,9,10],notes:''},
-  {id:'broccoli',name:'Broccoli',spacing_cm:50,row_spacing_cm:60,plantingMonths:[3,4,5,8,9],notes:''},
-  {id:'cauliflower',name:'Cauliflower',spacing_cm:50,row_spacing_cm:60,plantingMonths:[3,4,5,8,9],notes:''},
   {id:'strawberry',name:'Strawberry',spacing_cm:30,row_spacing_cm:40,plantingMonths:[3,4,5,8,9],notes:'Perennial in mild climates'},
-  {id:'blueberry',name:'Blueberry',spacing_cm:120,row_spacing_cm:150,plantingMonths:[5,6,7,8,9],notes:'Acidic soil'},
-  {id:'lavender',name:'Lavender',spacing_cm:45,row_spacing_cm:60,plantingMonths:[9,10,11,12,1,2,3],notes:'Dry soil'},
-  {id:'sage',name:'Sage',spacing_cm:45,row_spacing_cm:60,plantingMonths:[9,10,11,12,1,2,3],notes:''},
-  {id:'pepper',name:'Capsicum (Pepper)',spacing_cm:40,row_spacing_cm:60,plantingMonths:[10,11,12,1,2,3],notes:'Warm season'},
-  {id:'eggplant',name:'Eggplant',spacing_cm:60,row_spacing_cm:80,plantingMonths:[10,11,12,1,2,3],notes:''},
-  {id:'sweetcorn',name:'Sweetcorn',spacing_cm:25,row_spacing_cm:75,plantingMonths:[9,10,11,12,1,2,3],notes:'Plant in blocks'},
-  {id:'radish',name:'Radish',spacing_cm:5,row_spacing_cm:15,plantingMonths:[3,4,5,8,9,10],notes:'Fast crop'},
-  {id:'turnip',name:'Turnip',spacing_cm:10,row_spacing_cm:25,plantingMonths:[3,4,5,8,9],notes:''},
-  {id:'celery',name:'Celery',spacing_cm:30,row_spacing_cm:40,plantingMonths:[3,4,5,8,9],notes:'Needs moisture'},
-  {id:'leek',name:'Leek',spacing_cm:10,row_spacing_cm:20,plantingMonths:[3,4,5,8,9],notes:''},
-  {id:'melon',name:'Melon',spacing_cm:100,row_spacing_cm:150,plantingMonths:[10,11,12,1,2,3],notes:'Warm and sunny'},
-  {id:'artichoke',name:'Artichoke',spacing_cm:120,row_spacing_cm:150,plantingMonths:[3,4,5],notes:'Perennial in mild climates'},
-  {id:'asparagus',name:'Asparagus',spacing_cm:45,row_spacing_cm:120,plantingMonths:[4,5],notes:'Perennial bed'},
-  {id:'dill',name:'Dill',spacing_cm:30,row_spacing_cm:40,plantingMonths:[9,10,11,12,1,2,3],notes:''},
-  {id:'cilantro',name:'Coriander',spacing_cm:20,row_spacing_cm:30,plantingMonths:[3,4,5,8,9,10],notes:''},
-  {id:'marigold',name:'Marigold',spacing_cm:25,row_spacing_cm:30,plantingMonths:[10,11,12,1,2,3],notes:'Pest deterrent'},
-  {id:'nasturtium',name:'Nasturtium',spacing_cm:30,row_spacing_cm:40,plantingMonths:[9,10,11,12,1,2,3],notes:'Edible flowers'},
-  {id:'spinach_winter',name:'Winter Spinach',spacing_cm:10,row_spacing_cm:20,plantingMonths:[5,6,7,8],notes:'Cold tolerant'},
-  {id:'microgreens',name:'Microgreens',spacing_cm:2,row_spacing_cm:2,plantingMonths:[1,2,3,4,5,6,7,8,9,10,11,12],notes:'Quick harvest'}
+  {id:'rosemary',name:'Rosemary',spacing_cm:60,row_spacing_cm:100,plantingMonths:[1,2,3,4,5,6,7,8,9,10,11,12],notes:'Perennial'}
 ];
-/* ---------- End plant DB ---------- */
-
 /* ---------- App state ---------- */
-const state = {
-  objects: [], // {id,type,x,y,w,h,rotation,props}
-  selectedId: null,
-  tool: 'select',
-  snap: true,
-  gridSize: 10,
-  units: 'metric',
-  undoStack: [], redoStack: []
-};
+const state = { objects:[], selectedId:null, tool:'select', snap:true, gridSize:10, units:'metric', undoStack:[], redoStack:[] };
 
-/* ---------- Helpers ---------- */
+/* ---------- DOM refs ---------- */
 const svg = document.getElementById('svgCanvas');
 const objectsGroup = document.getElementById('objects');
 const paletteEl = document.getElementById('plantPalette');
 const inspector = document.getElementById('inspectorContent');
 const plannerTimeline = document.getElementById('plannerTimeline');
 
+/* ---------- Helpers ---------- */
 function uid(prefix='id'){return prefix+Math.random().toString(36).slice(2,9)}
 function snap(v){ if(!state.snap) return v; const g=Number(document.getElementById('gridSize').value)||10; return Math.round(v/g)*g; }
-function pxToCm(px){ /* assume 10px = 1cm for simple scale */ return px/10; }
+function pxToCm(px){ return px/10; } // simple scale
 function cmToPx(cm){ return cm*10; }
 
 /* ---------- Render plant palette ---------- */
@@ -177,17 +158,15 @@ function renderPalette(list=PLANTS){
   list.forEach(p=>{
     const div=document.createElement('div'); div.className='plant-item';
     div.draggable=true;
-    div.innerHTML=`<div style="width:28px;height:28px;border-radius:6px;background:#e6f7ef;display:flex;align-items:center;justify-content:center;color:#0b6b4a;font-weight:600">${p.name[0]}</div><div style="flex:1"><div style="font-size:13px">${p.name}</div><div class="muted small">${p.spacing_cm} cm</div></div>`;
-    div.addEventListener('dragstart',e=>{
-      e.dataTransfer.setData('text/plain',JSON.stringify({type:'plant',plantId:p.id}));
-    });
+    div.innerHTML=`<div class="icon">${p.name[0]}</div><div style="flex:1"><div style="font-size:14px">${p.name}</div><div class="muted small">${p.spacing_cm} cm</div></div>`;
+    div.addEventListener('dragstart',e=>{ e.dataTransfer.setData('text/plain',JSON.stringify({type:'plant',plantId:p.id})); });
     div.addEventListener('click',()=>{ addPlantInstance(p.id,600,200); });
     paletteEl.appendChild(div);
   });
 }
 renderPalette();
 
-/* ---------- Tool buttons ---------- */
+/* ---------- Tool wiring ---------- */
 document.getElementById('tool-select').onclick=()=>setTool('select');
 document.getElementById('tool-bed').onclick=()=>setTool('bed');
 document.getElementById('tool-path').onclick=()=>setTool('path');
@@ -203,129 +182,180 @@ document.getElementById('snapBtn').onclick=()=>{ state.snap=!state.snap; alert('
 document.getElementById('gridSize').onchange=(e)=>{ state.gridSize=Number(e.target.value); updateGrid(); };
 document.getElementById('units').onchange=(e)=>{ state.units=e.target.value; };
 document.getElementById('plantSearch').oninput=(e)=>{ const q=e.target.value.toLowerCase(); renderPalette(PLANTS.filter(p=>p.name.toLowerCase().includes(q))); };
+document.getElementById('clearSearch').onclick=()=>{ document.getElementById('plantSearch').value=''; renderPalette(); };
 
-/* ---------- SVG interaction: add objects ---------- */
-svg.addEventListener('mousedown',svgPointerDown);
+/* ---------- Drag/drop onto SVG ---------- */
 svg.addEventListener('dragover',e=>e.preventDefault());
 svg.addEventListener('drop',e=>{
   e.preventDefault();
   const data = e.dataTransfer.getData('text/plain');
   try{
     const obj = JSON.parse(data);
-    const pt = svg.createSVGPoint(); pt.x=e.offsetX; pt.y=e.offsetY;
-    if(obj.type==='plant') addPlantInstance(obj.plantId,pt.x,pt.y);
+    const x = e.offsetX, y = e.offsetY;
+    if(obj.type==='plant') addPlantInstance(obj.plantId, x, y);
   }catch(err){}
 });
 
-function setTool(t){ state.tool=t; }
+/* ---------- svgPointerDown: fixed handler ---------- */
+svg.addEventListener('mousedown', svgPointerDown);
+
+function svgPointerDown(e){
+  // central handler for click-to-create depending on active tool
+  const x = snap(e.offsetX), y = snap(e.offsetY);
+  if(state.tool === 'bed'){
+    // create a default bed centered at click
+    const w = 300, h = 140;
+    addBed(x - Math.round(w/2), y - Math.round(h/2), w, h);
+    return;
+  }
+  if(state.tool === 'overhang'){
+    const w = 220, h = 90;
+    addOverhang(x - Math.round(w/2), y - Math.round(h/2), w, h);
+    return;
+  }
+  if(state.tool === 'plant'){
+    // quick plant picker: open small prompt to choose plant id
+    const plantId = prompt('Enter plant id (e.g., tomato, lettuce, basil):','lettuce');
+    if(plantId){ addPlantInstance(plantId.trim(), x, y); }
+    return;
+  }
+  if(state.tool === 'path'){
+    // simple path creation: first click starts, second click ends
+    if(!state._pathTemp){
+      state._pathTemp = [{x,y}];
+      // visual feedback: small marker
+      const marker = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      marker.setAttribute('cx',x); marker.setAttribute('cy',y); marker.setAttribute('r',6);
+      marker.setAttribute('fill','#fff'); marker.setAttribute('stroke',varAccent());
+      marker.setAttribute('id','_pathStartMarker');
+      svg.appendChild(marker);
+      alert('Path start set. Click again to finish the path.');
+    } else {
+      state._pathTemp.push({x,y});
+      addPath(state._pathTemp);
+      // cleanup
+      const m = document.getElementById('_pathStartMarker'); if(m) m.remove();
+      state._pathTemp = null;
+    }
+    return;
+  }
+  // default: selection behavior
+  // find object under pointer (simple hit test)
+  const hit = hitTest(e.offsetX, e.offsetY);
+  if(hit) selectObject(hit.id);
+  else { state.selectedId = null; renderInspector(); highlightSelection(); }
+}
+
+/* helper to return accent color for inline use */
+function varAccent(){ return getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#1e8e63'; }
+
+/* ---------- Hit test (simple bounding box) ---------- */
+function hitTest(px,py){
+  for(let i=state.objects.length-1;i>=0;i--){
+    const o = state.objects[i];
+    if(o.type==='bed' || o.type==='overhang'){
+      if(px >= o.x && px <= o.x+o.w && py >= o.y && py <= o.y+o.h) return o;
+    } else if(o.type==='plant'){
+      const r = o.w/2; const dx = px - o.x; const dy = py - o.y;
+      if(dx*dx + dy*dy <= r*r) return o;
+    } else if(o.type==='path'){
+      // rough: check distance to any segment
+      for(let j=0;j<o.points.length-1;j++){
+        const a=o.points[j], b=o.points[j+1];
+        if(pointToSegmentDistance(px,py,a.x,a.y,b.x,b.y) < 12) return o;
+      }
+    }
+  }
+  return null;
+}
+function pointToSegmentDistance(px,py,x1,y1,x2,y2){
+  const A = px - x1, B = py - y1, C = x2 - x1, D = y2 - y1;
+  const dot = A*C + B*D;
+  const len_sq = C*C + D*D;
+  let param = len_sq !== 0 ? dot / len_sq : -1;
+  if(param < 0) { var xx = x1; var yy = y1; }
+  else if(param > 1) { var xx = x2; var yy = y2; }
+  else { var xx = x1 + param * C; var yy = y1 + param * D; }
+  const dx = px - xx, dy = py - yy;
+  return Math.sqrt(dx*dx + dy*dy);
+}
 
 /* ---------- Object creation functions ---------- */
 function addBed(x=200,y=200,w=300,h=120){
   const id=uid('bed_');
-  const obj={id,type:'bed',x,y,w,h,rotation:0,props:{fill:'#fef3e6',stroke:'#d6a95a'}};
-  pushState(); state.objects.push(obj); render();
-  return obj;
+  const obj={id,type:'bed',x,y,w,h,rotation:0,props:{fill:'#fff7ed',stroke:'#f0b36a'}};
+  pushState(); state.objects.push(obj); render(); return obj;
 }
 function addPath(points=[{x:100,y:100},{x:300,y:100}],stroke='#bdbdbd'){
   const id=uid('path_');
   const obj={id,type:'path',points,props:{stroke}};
-  pushState(); state.objects.push(obj); render();
-  return obj;
+  pushState(); state.objects.push(obj); render(); return obj;
 }
 function addOverhang(x=400,y=120,w=200,h=80){
   const id=uid('over_');
   const obj={id,type:'overhang',x,y,w,h,rotation:0,props:{fill:'rgba(0,0,0,0.06)',stroke:'#999'}};
-  pushState(); state.objects.push(obj); render();
-  return obj;
+  pushState(); state.objects.push(obj); render(); return obj;
 }
 function addPlantInstance(plantId,x=300,y=300,size=20){
   const plant = PLANTS.find(p=>p.id===plantId);
   const id=uid('p_');
-  const obj={id,type:'plant',x,y,w:size,h:size,rotation:0,props:{plantId,spacing_cm:plant.spacing_cm}};
-  pushState(); state.objects.push(obj); render(); updatePlanner();
-  return obj;
+  const obj={id,type:'plant',x,y,w:size,h:size,rotation:0,props:{plantId,spacing_cm:plant?plant.spacing_cm:20}};
+  pushState(); state.objects.push(obj); render(); updatePlanner(); return obj;
 }
 
-/* ---------- Render function ---------- */
+/* ---------- Render ---------- */
 function render(){
   objectsGroup.innerHTML='';
   state.objects.forEach(o=>{
     if(o.type==='bed'){
-      const g=document.createElementNS('http://www.w3.org/2000/svg','g');
-      g.setAttribute('data-id',o.id);
+      const g=document.createElementNS('http://www.w3.org/2000/svg','g'); g.setAttribute('data-id',o.id);
       const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
       rect.setAttribute('x',o.x); rect.setAttribute('y',o.y); rect.setAttribute('width',o.w); rect.setAttribute('height',o.h);
-      rect.setAttribute('fill',o.props.fill); rect.setAttribute('stroke',o.props.stroke);
-      rect.setAttribute('rx',6);
-      g.appendChild(rect);
-      objectsGroup.appendChild(g);
-      attachObjectEvents(g,o);
+      rect.setAttribute('fill',o.props.fill); rect.setAttribute('stroke',o.props.stroke); rect.setAttribute('rx',8);
+      g.appendChild(rect); objectsGroup.appendChild(g); attachObjectEvents(g,o);
     } else if(o.type==='path'){
-      const g=document.createElementNS('http://www.w3.org/2000/svg','g');
-      g.setAttribute('data-id',o.id);
+      const g=document.createElementNS('http://www.w3.org/2000/svg','g'); g.setAttribute('data-id',o.id);
       const path=document.createElementNS('http://www.w3.org/2000/svg','polyline');
       path.setAttribute('points',o.points.map(p=>`${p.x},${p.y}`).join(' '));
-      path.setAttribute('fill','none'); path.setAttribute('stroke',o.props.stroke); path.setAttribute('stroke-width',12); path.setAttribute('stroke-linecap','round');
-      g.appendChild(path);
-      objectsGroup.appendChild(g);
-      attachObjectEvents(g,o);
+      path.setAttribute('fill','none'); path.setAttribute('stroke',o.props.stroke); path.setAttribute('stroke-width',14); path.setAttribute('stroke-linecap','round');
+      g.appendChild(path); objectsGroup.appendChild(g); attachObjectEvents(g,o);
     } else if(o.type==='overhang'){
-      const g=document.createElementNS('http://www.w3.org/2000/svg','g');
-      g.setAttribute('data-id',o.id);
+      const g=document.createElementNS('http://www.w3.org/2000/svg','g'); g.setAttribute('data-id',o.id);
       const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
       rect.setAttribute('x',o.x); rect.setAttribute('y',o.y); rect.setAttribute('width',o.w); rect.setAttribute('height',o.h);
-      rect.setAttribute('fill',o.props.fill); rect.setAttribute('stroke',o.props.stroke);
-      rect.setAttribute('rx',4);
-      g.appendChild(rect);
-      objectsGroup.appendChild(g);
-      attachObjectEvents(g,o);
+      rect.setAttribute('fill',o.props.fill); rect.setAttribute('stroke',o.props.stroke); rect.setAttribute('rx',6);
+      g.appendChild(rect); objectsGroup.appendChild(g); attachObjectEvents(g,o);
     } else if(o.type==='plant'){
-      const g=document.createElementNS('http://www.w3.org/2000/svg','g');
-      g.setAttribute('data-id',o.id);
+      const g=document.createElementNS('http://www.w3.org/2000/svg','g'); g.setAttribute('data-id',o.id);
       const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
       circle.setAttribute('cx',o.x); circle.setAttribute('cy',o.y); circle.setAttribute('r',o.w/2);
-      circle.setAttribute('fill','#d1fae5'); circle.setAttribute('stroke','#059669');
+      circle.setAttribute('fill','#dff7ee'); circle.setAttribute('stroke',varAccent());
       const text=document.createElementNS('http://www.w3.org/2000/svg','text');
       text.setAttribute('x',o.x); text.setAttribute('y',o.y+4); text.setAttribute('text-anchor','middle'); text.setAttribute('font-size','10');
       const plant = PLANTS.find(p=>p.id===o.props.plantId);
       text.textContent = plant ? plant.name[0] : '?';
-      g.appendChild(circle); g.appendChild(text);
-      objectsGroup.appendChild(g);
-      attachObjectEvents(g,o);
+      g.appendChild(circle); g.appendChild(text); objectsGroup.appendChild(g); attachObjectEvents(g,o);
     }
   });
   highlightSelection();
 }
 
-/* ---------- Attach events to each object group ---------- */
+/* ---------- Attach events ---------- */
 function attachObjectEvents(g,o){
   g.addEventListener('mousedown',e=>{
     e.stopPropagation();
     selectObject(o.id);
-    if(state.tool==='select'){
-      startDrag(o,e);
-    } else if(state.tool==='bed' && o.type!=='bed'){
-      // ignore
-    }
+    if(state.tool==='select') startDrag(o,e);
   });
 }
 
-/* ---------- Selection and inspector ---------- */
-function selectObject(id){
-  state.selectedId=id;
-  renderInspector();
-  highlightSelection();
-}
+/* ---------- Selection & inspector ---------- */
+function selectObject(id){ state.selectedId=id; renderInspector(); highlightSelection(); }
 function highlightSelection(){
-  // draw handles for selected object
-  // remove existing handles
-  const existing = document.getElementById('handles');
-  if(existing) existing.remove();
+  const existing = document.getElementById('handles'); if(existing) existing.remove();
   if(!state.selectedId) return;
-  const o = state.objects.find(x=>x.id===state.selectedId);
-  if(!o) return;
-  const g = document.createElementNS('http://www.w3.org/2000/svg','g');
-  g.id='handles';
+  const o = state.objects.find(x=>x.id===state.selectedId); if(!o) return;
+  const g = document.createElementNS('http://www.w3.org/2000/svg','g'); g.id='handles';
   if(o.type==='bed' || o.type==='overhang'){
     const x=o.x, y=o.y, w=o.w, h=o.h;
     const corners=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
@@ -339,7 +369,7 @@ function highlightSelection(){
   } else if(o.type==='plant'){
     const r=o.w/2;
     const hnd=document.createElementNS('http://www.w3.org/2000/svg','rect');
-    hnd.setAttribute('x',o.x+r+4); hnd.setAttribute('y',o.y-r-4); hnd.setAttribute('width',10); hnd.setAttribute('height',10);
+    hnd.setAttribute('x',o.x+r+6); hnd.setAttribute('y',o.y-r-6); hnd.setAttribute('width',12); hnd.setAttribute('height',12);
     hnd.setAttribute('class','handle');
     hnd.addEventListener('mousedown',e=>{ e.stopPropagation(); startResize(o,0,e); });
     g.appendChild(hnd);
@@ -347,42 +377,37 @@ function highlightSelection(){
   objectsGroup.appendChild(g);
 }
 
-/* ---------- Dragging and resizing ---------- */
+/* ---------- Drag & Resize ---------- */
 let dragState=null;
 function startDrag(o,e){
-  const pt = svg.createSVGPoint(); pt.x=e.offsetX; pt.y=e.offsetY;
+  const pt = {x:e.offsetX,y:e.offsetY};
   dragState={obj:o,ox:o.x,oy:o.y,startX:pt.x,startY:pt.y};
   window.addEventListener('mousemove',onDrag);
   window.addEventListener('mouseup',endDrag);
 }
 function onDrag(e){
   if(!dragState) return;
-  const pt = svg.createSVGPoint(); pt.x=e.offsetX; pt.y=e.offsetY;
+  const pt = {x:e.offsetX,y:e.offsetY};
   const dx = pt.x - dragState.startX; const dy = pt.y - dragState.startY;
   dragState.obj.x = snap(dragState.ox + dx);
   dragState.obj.y = snap(dragState.oy + dy);
   render();
 }
-function endDrag(e){
-  if(dragState){ pushState(); dragState=null; updatePlanner(); }
-  window.removeEventListener('mousemove',onDrag);
-  window.removeEventListener('mouseup',endDrag);
-}
+function endDrag(e){ if(dragState){ pushState(); dragState=null; updatePlanner(); } window.removeEventListener('mousemove',onDrag); window.removeEventListener('mouseup',endDrag); }
 
 let resizeState=null;
 function startResize(o,corner,e){
-  const pt = svg.createSVGPoint(); pt.x=e.offsetX; pt.y=e.offsetY;
+  const pt = {x:e.offsetX,y:e.offsetY};
   resizeState={obj:o,corner,startX:pt.x,startY:pt.y,ow:o.w,oh:o.h,ox:o.x,oy:o.y};
   window.addEventListener('mousemove',onResize);
   window.addEventListener('mouseup',endResize);
 }
 function onResize(e){
   if(!resizeState) return;
-  const pt = svg.createSVGPoint(); pt.x=e.offsetX; pt.y=e.offsetY;
+  const pt = {x:e.offsetX,y:e.offsetY};
   const dx = pt.x - resizeState.startX; const dy = pt.y - resizeState.startY;
   const o = resizeState.obj;
   if(o.type==='bed' || o.type==='overhang'){
-    // simple bottom-right resize for demo; corner index ignored for brevity
     o.w = Math.max(20, resizeState.ow + dx);
     o.h = Math.max(20, resizeState.oh + dy);
   } else if(o.type==='plant'){
@@ -391,30 +416,23 @@ function onResize(e){
   }
   render();
 }
-function endResize(e){
-  if(resizeState){ pushState(); resizeState=null; updatePlanner(); }
-  window.removeEventListener('mousemove',onResize);
-  window.removeEventListener('mouseup',endResize);
-}
+function endResize(e){ if(resizeState){ pushState(); resizeState=null; updatePlanner(); } window.removeEventListener('mousemove',onResize); window.removeEventListener('mouseup',endResize); }
 
-/* ---------- Auto-fill algorithm ---------- */
+/* ---------- Auto-fill ---------- */
 function autoFillSelectedBed(){
   const sel = state.objects.find(o=>o.id===state.selectedId && o.type==='bed');
   if(!sel){ alert('Select a bed first'); return; }
-  // ask user for plant type (simple prompt for demo)
   const plantName = prompt('Enter plant id to fill (e.g., tomato, lettuce):','lettuce');
   const plant = PLANTS.find(p=>p.id===plantName);
   if(!plant){ alert('Plant not found'); return; }
-  // compute how many rows/cols fit
-  const spacing = plant.spacing_cm; // cm
+  const spacing = plant.spacing_cm;
   const rowSpacing = plant.row_spacing_cm || spacing;
   const bedWcm = pxToCm(sel.w);
   const bedHcm = pxToCm(sel.h);
   const cols = Math.floor(bedWcm / spacing);
   const rows = Math.floor(bedHcm / rowSpacing);
   if(cols<1 || rows<1){ alert('Bed too small for that plant with current spacing'); return; }
-  // place plants in grid inside bed with 1cm margin
-  const margin = 5; // cm
+  const margin = 5;
   const startXcm = pxToCm(sel.x) + margin;
   const startYcm = pxToCm(sel.y) + margin;
   for(let r=0;r<rows;r++){
@@ -427,29 +445,25 @@ function autoFillSelectedBed(){
   updatePlanner();
 }
 
-/* ---------- Planner: aggregate by month ---------- */
+/* ---------- Planner ---------- */
 function updatePlanner(){
-  // collect plant instances and map to months
   const months = Array.from({length:12},()=>[]);
   state.objects.filter(o=>o.type==='plant').forEach(p=>{
     const plant = PLANTS.find(x=>x.id===p.props.plantId);
     if(!plant) return;
-    plant.plantingMonths.forEach(m=>{
-      months[m-1].push({name:plant.name,id:plant.id});
-    });
+    plant.plantingMonths.forEach(m=>{ months[m-1].push({name:plant.name,id:plant.id}); });
   });
-  // render timeline
   plannerTimeline.innerHTML='';
   months.forEach((list,i)=>{
     const div=document.createElement('div');
-    div.style.display='flex'; div.style.justifyContent='space-between'; div.style.padding='4px 0';
+    div.style.display='flex'; div.style.justifyContent='space-between'; div.style.padding='6px 0';
     const monthName = new Date(2000,i,1).toLocaleString('en-US',{month:'short'});
     div.innerHTML=`<div style="width:70px">${monthName}</div><div style="flex:1">${list.slice(0,6).map(x=>x.name).join(', ') || '<span class="muted">—</span>'}</div><div style="width:40px" class="muted small">${list.length}</div>`;
     plannerTimeline.appendChild(div);
   });
 }
 
-/* ---------- Save / Load .garden ---------- */
+/* ---------- Save / Load ---------- */
 function saveGarden(){
   const data = {meta:{created:Date.now(),units:state.units},objects:state.objects};
   const blob = new Blob([JSON.stringify(data, null, 2)],{type:'application/json'});
@@ -474,7 +488,7 @@ function loadGardenFile(e){
 function pushState(clearRedo=false){
   state.undoStack.push(JSON.stringify(state.objects));
   if(clearRedo) state.redoStack=[];
-  if(state.undoStack.length>50) state.undoStack.shift();
+  if(state.undoStack.length>80) state.undoStack.shift();
 }
 function undo(){
   if(state.undoStack.length<2) return;
@@ -500,24 +514,24 @@ function updateGrid(){
   if(pattern) pattern.setAttribute('d', `M${gsize} 0 L0 0 0 ${gsize}`);
 }
 
-/* ---------- Inspector UI ---------- */
+/* ---------- Inspector ---------- */
 function renderInspector(){
   const id = state.selectedId;
   if(!id){ inspector.innerHTML='<div class="muted small">Select an object to edit properties.</div>'; return; }
   const o = state.objects.find(x=>x.id===id);
   if(!o) return;
-  let html = `<div><strong>${o.type.toUpperCase()}</strong></div>`;
+  let html = `<div><strong style="font-size:15px">${o.type.toUpperCase()}</strong></div>`;
   if(o.type==='bed' || o.type==='overhang'){
-    html += `<div style="margin-top:8px"><label class="small">Width (px)</label><input id="propW" type="number" value="${o.w}"></div>`;
-    html += `<div style="margin-top:8px"><label class="small">Height (px)</label><input id="propH" type="number" value="${o.h}"></div>`;
-    html += `<div style="margin-top:8px"><button id="deleteObj">Delete</button></div>`;
+    html += `<div style="margin-top:8px"><label class="muted small">Width (px)</label><input id="propW" type="number" value="${o.w}"></div>`;
+    html += `<div style="margin-top:8px"><label class="muted small">Height (px)</label><input id="propH" type="number" value="${o.h}"></div>`;
+    html += `<div style="margin-top:8px"><button id="deleteObj" class="btn-ghost">Delete</button></div>`;
   } else if(o.type==='plant'){
     const plant = PLANTS.find(p=>p.id===o.props.plantId);
-    html += `<div style="margin-top:8px"><label class="small">Plant</label><div>${plant ? plant.name : o.props.plantId}</div></div>`;
-    html += `<div style="margin-top:8px"><label class="small">Spacing (cm)</label><input id="propSpacing" type="number" value="${o.props.spacing_cm}"></div>`;
-    html += `<div style="margin-top:8px"><button id="deleteObj">Delete</button></div>`;
+    html += `<div style="margin-top:8px"><label class="muted small">Plant</label><div>${plant ? plant.name : o.props.plantId}</div></div>`;
+    html += `<div style="margin-top:8px"><label class="muted small">Spacing (cm)</label><input id="propSpacing" type="number" value="${o.props.spacing_cm}"></div>`;
+    html += `<div style="margin-top:8px"><button id="deleteObj" class="btn-ghost">Delete</button></div>`;
   } else if(o.type==='path'){
-    html += `<div style="margin-top:8px"><button id="deleteObj">Delete</button></div>`;
+    html += `<div style="margin-top:8px"><button id="deleteObj" class="btn-ghost">Delete</button></div>`;
   }
   inspector.innerHTML = html;
   const del = document.getElementById('deleteObj'); if(del) del.onclick=()=>{ state.objects = state.objects.filter(x=>x.id!==o.id); state.selectedId=null; pushState(); render(); updatePlanner(); };
@@ -541,6 +555,10 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey) && e.key==='z'){ undo(); }
   if((e.ctrlKey||e.metaKey) && e.key==='y'){ redo(); }
 });
+
+/* ---------- Utility: simple alert for help button ---------- */
+document.getElementById('helpBtn').onclick=()=>alert('Tap canvas to add items when a tool is active. Drag plants from the palette to place them. Save to .garden to persist.');
+document.getElementById('fab').onclick=()=>{ setTool('bed'); alert('Quick: Add Bed tool selected. Tap canvas to place.'); };
 </script>
 </body>
 </html>
